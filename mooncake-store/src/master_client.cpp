@@ -131,6 +131,21 @@ struct RpcNameTraits<&WrappedMasterService::ServiceReady> {
     static constexpr const char* value = "ServiceReady";
 };
 
+template <>
+struct RpcNameTraits<&WrappedMasterService::Copy> {
+    static constexpr const char* value = "Copy";
+};
+
+template <>
+struct RpcNameTraits<&WrappedMasterService::Move> {
+    static constexpr const char* value = "Move";
+};
+
+template <>
+struct RpcNameTraits<&WrappedMasterService::QueryTask> {
+    static constexpr const char* value = "QueryTask";
+};
+
 template <auto ServiceMethod, typename ReturnType, typename... Args>
 tl::expected<ReturnType, ErrorCode> MasterClient::invoke_rpc(Args&&... args) {
     auto pool = client_accessor_.GetClientPool();
@@ -496,6 +511,41 @@ MasterClient::GetStorageConfig() {
 
     auto result = invoke_rpc<&WrappedMasterService::GetStorageConfig,
                              GetStorageConfigResponse>();
+    timer.LogResponseExpected(result);
+    return result;
+}
+
+tl::expected<UUID, ErrorCode> MasterClient::Copy(
+    const std::string& key, const std::vector<std::string>& targets) {
+    ScopedVLogTimer timer(1, "MasterClient::Copy");
+    timer.LogRequest("key=", key,
+                    ", targets_size=", targets.size());
+
+    auto result = invoke_rpc<&WrappedMasterService::Copy, UUID>(key, targets);
+    timer.LogResponseExpected(result);
+    return result; 
+}
+
+tl::expected<UUID, ErrorCode> MasterClient::Move(
+    const std::string& key, const std::string& source,
+    const std::string& target) {
+    ScopedVLogTimer timer(1, "MasterClient::Move");
+    timer.LogRequest("key=", key, ", source=", source,
+                    ", target=", target);
+
+    auto result = invoke_rpc<&WrappedMasterService::Move, UUID>(
+        key, source, target);
+    timer.LogResponseExpected(result);
+    return result;
+}
+
+tl::expected<QueryTaskResponse, ErrorCode> MasterClient::QueryTask(
+    const UUID& task_id) {
+    ScopedVLogTimer timer(1, "MasterClient::QueryTask");
+    timer.LogRequest("task_id=", task_id);
+
+    auto result = invoke_rpc<&WrappedMasterService::QueryTask, QueryTaskResponse>(
+        task_id);
     timer.LogResponseExpected(result);
     return result;
 }
