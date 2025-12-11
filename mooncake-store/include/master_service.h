@@ -25,6 +25,7 @@
 #include "master_config.h"
 #include "rpc_types.h"
 #include "replica.h"
+#include "task_manager.h"
 
 namespace mooncake {
 // Forward declarations
@@ -227,6 +228,27 @@ class MasterService {
      */
     tl::expected<GetStorageConfigResponse, ErrorCode> GetStorageConfig() const;
 
+    /**
+     * @brief Copy an object's replicas to target segments
+     * @return Copy task ID on success, ErrorCode on failure
+     */
+    tl::expected<UUID, ErrorCode> Copy(const std::string& key,
+                                       const std::vector<std::string>& targets);
+
+    /**
+     * @brief Move an object's replica from source segment to target segment
+     * @return Move task ID on success, ErrorCode on failure
+     */
+    tl::expected<UUID, ErrorCode> Move(const std::string& key,
+                                       const std::string& source,
+                                       const std::string& target);
+
+    /**
+     * @brief Query the status of a task
+     * @return Task basic info
+     */
+    tl::expected<QueryTaskResponse, ErrorCode> QueryTask(const UUID& task_id);
+    
    private:
     // Resolve the key to a sanitized format for storage
     std::string SanitizeKey(const std::string& key) const;
@@ -401,6 +423,19 @@ class MasterService {
             }
 
             return discarded_replicas;
+        }
+
+        std::vector<std::string> GetReplicaSegmentNames() const {
+            std::vector<std::string> segment_names;
+            for (const auto& replica : replicas) {
+                const auto& segment_name_options = replica.get_segment_names();
+                for (const auto& segment_name_opt : segment_name_options) {
+                    if (segment_name_opt.has_value()) {
+                        segment_names.push_back(segment_name_opt.value());
+                    }
+                }
+            }
+            return segment_names;
         }
     };
 
@@ -591,6 +626,9 @@ class MasterService {
     std::mutex discarded_replicas_mutex_;
     std::list<DiscardedReplicas> discarded_replicas_
         GUARDED_BY(discarded_replicas_mutex_);
+    
+    // Task manager
+    ClientTaskManager task_manager_;
 };
 
 }  // namespace mooncake

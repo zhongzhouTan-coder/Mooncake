@@ -159,6 +159,9 @@ enum class ErrorCode : int32_t {
     BUCKET_ALREADY_EXISTS = -1201,    ///< Bucket already exists.
     KEYS_ULTRA_BUCKET_LIMIT = -1202,  ///< Keys ultra bucket limit.
     UNABLE_OFFLOAD = -1300,  ///< The offload functionality is not enabled
+
+    // Task errors (Range: -1400 to -1499)
+    TASK_NOT_FOUND = -1400,  ///< Task not found.
 };
 
 int32_t toInt(ErrorCode errorCode) noexcept;
