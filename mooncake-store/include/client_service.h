@@ -20,6 +20,7 @@
 #include "types.h"
 #include "replica.h"
 #include "master_metric_manager.h"
+#include "task_executor.h"
 
 namespace mooncake {
 
@@ -272,7 +273,7 @@ class Client {
      */
     std::vector<tl::expected<bool, ErrorCode>> BatchIsExist(
         const std::vector<std::string>& keys);
-    
+
     /**
      * @brief Copy an object's replicas to target segments
      * @param key Object key
@@ -280,8 +281,8 @@ class Client {
      * @return tl::expected<UUID, ErrorCode> Copy task ID on success,
      * ErrorCode on failure
      */
-    tl::expected<UUID, ErrorCode> Copy(
-        const std::string& key, const std::vector<std::string>& targets);
+    tl::expected<UUID, ErrorCode> Copy(const std::string& key,
+                                       const std::vector<std::string>& targets);
 
     /**
      * @brief Move an object's replica from source segment to target segment
@@ -291,17 +292,17 @@ class Client {
      * @return tl::expected<UUID, ErrorCode> Move task ID on success,
      * ErrorCode on failure
      */
-    tl::expected<UUID, ErrorCode> Move(const std::string& key, 
-        const std::string& source, const std::string& target);
-    
+    tl::expected<UUID, ErrorCode> Move(const std::string& key,
+                                       const std::string& source,
+                                       const std::string& target);
+
     /**
      * @brief Query a task by task id
      * @param task_id Task ID to query
      * @return tl::expected<QueryTaskResponse, ErrorCode> Task basic info
      * on success, ErrorCode on failure
      */
-    tl::expected<QueryTaskResponse, ErrorCode> QueryTask(
-        const UUID& task_id);
+    tl::expected<QueryTaskResponse, ErrorCode> QueryTask(const UUID& task_id);
 
     /**
      * @brief Mounts a local disk segment into the master.
@@ -353,12 +354,12 @@ class Client {
      * @brief Fetch tasks assigned to a client
      * @param client_id Client ID
      * @param batch_size Number of tasks to fetch
-     * @return tl::expected<std::vector<TaskAssignment>, ErrorCode> list of tasks
-     * on success, ErrorCode on failure
+     * @return tl::expected<std::vector<TaskAssignment>, ErrorCode> list of
+     * tasks on success, ErrorCode on failure
      */
     tl::expected<std::vector<TaskAssignment>, ErrorCode> FetchTasks(
         const UUID& client_id, size_t batch_size);
-    
+
     /**
      * @brief Mark the task as complete
      * @param client_id Client ID
@@ -394,6 +395,11 @@ class Client {
     [[nodiscard]] std::string GetTransportEndpoint() {
         return transfer_engine_->getLocalIpAndPort();
     }
+
+    // Grant friend access to internal executors so they can call private
+    // data transfer methods without exposing them in the public API.
+    friend class ReplicaCopyExecutor;
+    friend class ReplicaMoveExecutor;
 
    private:
     /**
@@ -492,6 +498,11 @@ class Client {
     std::thread ping_thread_;
     std::atomic<bool> ping_running_{false};
     void PingThreadMain(bool is_ha_mode, std::string current_master_address);
+    void PollAndDispatchTasks();
+    void SubmitTask(const TaskAssignment& assignment);
+
+    // Task executor for async tasks execution
+    std::unique_ptr<TaskExecutor> task_executor_;
 };
 
 }  // namespace mooncake
