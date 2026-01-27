@@ -435,7 +435,7 @@ tl::expected<void, ErrorCode> RealClient::put_internal(
     memcpy(buffer_handle.ptr(), value.data(), value.size_bytes());
 
     std::vector<Slice> slices =
-        splitIntoSlices(buffer_handle.ptr(), buffer_handle.size());
+        split_into_slices(buffer_handle.ptr(), buffer_handle.size());
 
     auto put_result = client_->Put(key, slices, config);
     if (!put_result) {
@@ -504,7 +504,7 @@ tl::expected<void, ErrorCode> RealClient::put_batch_internal(
         auto &buffer_handle = *alloc_result;
         memcpy(buffer_handle.ptr(), value.data(), value.size_bytes());
         auto slices =
-            splitIntoSlices(buffer_handle.ptr(), buffer_handle.size());
+            split_into_slices(buffer_handle.ptr(), buffer_handle.size());
         buffer_handles.emplace_back(std::move(*alloc_result));
         batched_slices.emplace(key, std::move(slices));
     }
@@ -604,7 +604,7 @@ tl::expected<void, ErrorCode> RealClient::put_parts_internal(
 
     // Split into slices
     std::vector<Slice> slices =
-        splitIntoSlices(buffer_handle.ptr(), buffer_handle.size());
+        split_into_slices(buffer_handle.ptr(), buffer_handle.size());
 
     // Perform the put operation - buffer_handle will be automatically released
     auto put_result = client_->Put(key, slices, config);
